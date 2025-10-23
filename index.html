@@ -1,12 +1,10 @@
 
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <title>H5P 成績分數顯示範例 (p5.js)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>成績顯示與煙火特效範例</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    
     <!-- 引入 p5.js 函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.js"></script> 
 
@@ -20,190 +18,35 @@
     <style>
         /* 讓內容置中方便查看 */
         body { 
-           display: flex;
+            margin: 0; 
+            display: flex; 
             flex-direction: column;
-            align-items: center;
-            font-family: sans-serif;
-            background-color: #f0f0f0;
+            align-items: center; 
+            min-height: 100vh; 
+            font-family: Arial, sans-serif;
         }
-     #p5CanvasContainer {
-            border: 1px solid #ccc;
+        #h5pContainer {
             margin-top: 20px;
-            /* 確保 canvas 有一個可見的區域 */
         }
-        .controls {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* p5.js Canvas 會自動創建在 body 內 */
     </style>
 </head>
 <body>
     <h1>英文測驗</h1>
-    <h2>拖曳下方答案到上方空格</h2>
-   <div id="p5CanvasContainer">
-        </div>
-    
-    <div class="controls">
-        <p>測試控制項 (模擬 H5P 消息傳送):</p>
-        <button onclick="simulateScore(100, 100)">模擬滿分 (100/100) - 觸發煙火</button>
-        <button onclick="simulateScore(85, 100)">模擬高分 (85/100)</button>
-        <button onclick="simulateScore(50, 100)">模擬低分 (50/100)</button>
-        <button onclick="simulateScore(0, 100)">模擬零分 (0/100)</button>
+    <h2>將下方的答案移到上方的空格</h2>
+    <div id="h5pContainer">
+        <!-- 嵌入 H5P 匯出檔案 -->
+        <!-- 將 src 設為 H5P 匯出的 HTML 檔名，例如 h5p_exported.html -->
+        <iframe 
+            id="h5pIframe" 
+            src="1.html" 
+            width="400" 
+            height="300" 
+            style="border: 2px solid #ccc;">
+        </iframe>
     </div>
-
-    <script>
-        // =================================================================
-        // 全域變數
-        // =================================================================
-        let finalScore = 0; 
-        let maxScore = 0;
-        let scoreText = "請開始測驗或點擊模擬按鈕"; // 初始文字
-
-        // -----------------------------------------------------------------
-        // 步驟一：成績數據接收 (模擬 H5P 消息接收)
-        // -----------------------------------------------------------------
-
-        // 監聽來自 H5P 或其他 iframe 的 'message' 事件
-        window.addEventListener('message', function (event) {
-            // 實際應用中，您應該驗證 event.origin
-            // 確保只處理來自可信任來源的數據
-            
-            const data = event.data;
-            
-            if (data && data.type === 'H5P_SCORE_RESULT') {
-                
-                // !!! 關鍵步驟：更新全域變數 !!!
-                finalScore = data.score; 
-                maxScore = data.maxScore;
-                scoreText = `最終成績分數: ${finalScore}/${maxScore}`;
-                
-                console.log("新的分數已接收:", scoreText); 
-                
-                // 關鍵步驟 2: 呼叫重新繪製
-                if (typeof redraw === 'function') {
-                    redraw(); // p5.js 會自動調用 draw()，但明確呼叫更可靠
-                }
-            }
-        }, false);
-
-
-        // =================================================================
-        // 步驟二：使用 p5.js 繪製分數
-        // =================================================================
-
-        let p5Instance;
-
-        function setup() { 
-            // 創建 canvas，並將其掛載到指定的容器中
-            p5Instance = new p5(function(sketch) {
-                sketch.setup = function() {
-                    // 將 canvas 尺寸設定為適中大小，並掛載到 #p5CanvasContainer
-                    let container = sketch.select('#p5CanvasContainer');
-                    let w = window.innerWidth > 600 ? 600 : window.innerWidth * 0.9;
-                    let h = 450;
-                    sketch.createCanvas(w, h).parent('p5CanvasContainer'); 
-                    sketch.background(255); 
-                    sketch.noLoop(); // 只有在分數改變時才繪圖
-                };
-
-                sketch.draw = function() { 
-                    sketch.background(255); // 清除背景
-
-                    // 計算百分比
-                    let percentage = (maxScore === 0) ? 0 : (finalScore / maxScore) * 100;
-
-                    sketch.textSize(30); 
-                    sketch.textAlign(sketch.CENTER);
-                    
-                    // -----------------------------------------------------------------
-                    // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
-                    // -----------------------------------------------------------------
-                    
-                    if (percentage === 100) { // <-- 滿分判斷：觸發煙火文字
-                        sketch.textSize(40);
-                        sketch.fill(255, 0, 0); // 強烈紅色
-                        sketch.text("🎉 恭喜！完美煙火秀！ 🎉", sketch.width / 2, sketch.height / 2 - 60);
-                        
-                    } else if (percentage >= 90) {
-                        sketch.textSize(30);
-                        sketch.fill(0, 200, 50); // 綠色
-                        sketch.text("恭喜！優異成績！", sketch.width / 2, sketch.height / 2 - 50);
-                        
-                    } else if (percentage >= 60) {
-                        sketch.textSize(30);
-                        sketch.fill(255, 181, 35); // 黃色
-                        sketch.text("成績良好，請再接再厲。", sketch.width / 2, sketch.height / 2 - 50);
-                        
-                    } else if (percentage > 0) {
-                        sketch.textSize(30);
-                        sketch.fill(200, 0, 0); // 紅色
-                        sketch.text("需要加強努力！", sketch.width / 2, sketch.height / 2 - 50);
-                        
-                    } else {
-                        sketch.textSize(25);
-                        sketch.fill(150);
-                        sketch.text(scoreText, sketch.width / 2, sketch.height / 2);
-                    }
-
-                    // 顯示具體分數
-                    sketch.textSize(25);
-                    sketch.fill(50);
-                    sketch.text(`得分: ${finalScore}/${maxScore}`, sketch.width / 2, sketch.height / 2 + 30);
-                    
-                    
-                    // -----------------------------------------------------------------
-                    // B. 根據分數觸發不同的幾何圖形反映 (畫面反映二) - 煙火特效
-                    // -----------------------------------------------------------------
-                    
-                    if (percentage === 100) { // <-- 滿分判斷：觸發煙火圖形
-                        sketch.noStroke();
-                        // 模擬煙火爆發效果
-                        let baseY = sketch.height / 2 + 120;
-                        sketch.fill(255, 165, 0, 200); // 橘色
-                        sketch.circle(sketch.width / 2 - 50, baseY, 50);
-                        sketch.fill(255, 255, 0, 200); // 黃色
-                        sketch.circle(sketch.width / 2 + 50, baseY, 40);
-                        sketch.fill(255, 0, 255, 200); // 紫色
-                        sketch.circle(sketch.width / 2, baseY + 40, 60);
-                        
-                    } else if (percentage >= 90) {
-                        // 原 90% 效果：大圓圈
-                        sketch.fill(0, 200, 50, 150); // 帶透明度
-                        sketch.noStroke();
-                        sketch.circle(sketch.width / 2, sketch.height / 2 + 120, 150);
-                        
-                    } else if (percentage >= 60) {
-                        // 中等效果：方形
-                        sketch.fill(255, 181, 35, 150);
-                        sketch.rectMode(sketch.CENTER);
-                        sketch.rect(sketch.width / 2, sketch.height / 2 + 120, 150, 150);
-                    }
-                };
-            }, document.getElementById('p5CanvasContainer')); // 將 p5 實例掛載到容器
-        }
-
-        // -----------------------------------------------------------------
-        // 測試用：模擬成績數據發送
-        // -----------------------------------------------------------------
-        function simulateScore(score, max) {
-            const mockData = {
-                type: 'H5P_SCORE_RESULT',
-                score: score,
-                maxScore: max
-            };
-            // 創建一個假的事件對象來觸發監聽器
-            const mockEvent = { data: mockData };
-            window.dispatchEvent(new MessageEvent('message', { data: mockData }));
-            console.log(`--- 模擬發送分數: ${score}/${max} ---`);
-        }
-
-        // 在 p5 實例初始化後才執行 setup
-        window.onload = function() {
-            setup();
-        };
-
-    </script>
+    
+    <!-- 分數將顯示在 p5.js 創建的 Canvas 上 -->
 </body>
 </html>
+
