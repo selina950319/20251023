@@ -1,108 +1,149 @@
 // =================================================================
-// 步驟一：模擬成績數據接收
-// -----------------------------------------------------------------
+        // 全域變數
+        // =================================================================
+        let finalScore = 0; 
+        let maxScore = 0;
+        let scoreText = "請開始測驗或點擊模擬按鈕"; // 初始文字
+
+        // -----------------------------------------------------------------
+        // 步驟一：成績數據接收 (模擬 H5P 消息接收)
+        // -----------------------------------------------------------------
+
+        // 監聽來自 H5P 或其他 iframe 的 'message' 事件
+        window.addEventListener('message', function (event) {
+            // 實際應用中，您應該驗證 event.origin
+            // 確保只處理來自可信任來源的數據
+            
+            const data = event.data;
+            
+            if (data && data.type === 'H5P_SCORE_RESULT') {
+                
+                // !!! 關鍵步驟：更新全域變數 !!!
+                finalScore = data.score; 
+                maxScore = data.maxScore;
+                scoreText = `最終成績分數: ${finalScore}/${maxScore}`;
+                
+                console.log("新的分數已接收:", scoreText); 
+                
+                // 關鍵步驟 2: 呼叫重新繪製
+                if (typeof redraw === 'function') {
+                    redraw(); // p5.js 會自動調用 draw()，但明確呼叫更可靠
+                }
+            }
+        }, false);
 
 
-// let scoreText = "成績分數: " + finalScore + "/" + maxScore;
-// 確保這是全域變數
-let finalScore = 0; 
-let maxScore = 0;
-let scoreText = ""; // 用於 p5.js 繪圖的文字
+        // =================================================================
+        // 步驟二：使用 p5.js 繪製分數
+        // =================================================================
 
+        let p5Instance;
 
-window.addEventListener('message', function (event) {
-    // 執行來源驗證...
-    // ...
-    const data = event.data;
-    
-    if (data && data.type === 'H5P_SCORE_RESULT') {
-        
-        // !!! 關鍵步驟：更新全域變數 !!!
-        finalScore = data.score; // 更新全域變數
-        maxScore = data.maxScore;
-        scoreText = `最終成績分數: ${finalScore}/${maxScore}`;
-        
-        console.log("新的分數已接收:", scoreText); 
-        
-        // ----------------------------------------
-        // 關鍵步驟 2: 呼叫重新繪製 (見方案二)
-        // ----------------------------------------
-        if (typeof redraw === 'function') {
-            redraw(); 
+        function setup() { 
+            // 創建 canvas，並將其掛載到指定的容器中
+            p5Instance = new p5(function(sketch) {
+                sketch.setup = function() {
+                    // 將 canvas 尺寸設定為適中大小，並掛載到 #p5CanvasContainer
+                    let container = sketch.select('#p5CanvasContainer');
+                    let w = window.innerWidth > 600 ? 600 : window.innerWidth * 0.9;
+                    let h = 450;
+                    sketch.createCanvas(w, h).parent('p5CanvasContainer'); 
+                    sketch.background(255); 
+                    sketch.noLoop(); // 只有在分數改變時才繪圖
+                };
+
+                sketch.draw = function() { 
+                    sketch.background(255); // 清除背景
+
+                    // 計算百分比
+                    let percentage = (maxScore === 0) ? 0 : (finalScore / maxScore) * 100;
+
+                    sketch.textSize(30); 
+                    sketch.textAlign(sketch.CENTER);
+                    
+                    // -----------------------------------------------------------------
+                    // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
+                    // -----------------------------------------------------------------
+                    
+                    if (percentage === 100) { // <-- 滿分判斷：觸發煙火文字
+                        sketch.textSize(40);
+                        sketch.fill(255, 0, 0); // 強烈紅色
+                        sketch.text("🎉 恭喜！完美煙火秀！ 🎉", sketch.width / 2, sketch.height / 2 - 60);
+                        
+                    } else if (percentage >= 90) {
+                        sketch.textSize(30);
+                        sketch.fill(0, 200, 50); // 綠色
+                        sketch.text("恭喜！優異成績！", sketch.width / 2, sketch.height / 2 - 50);
+                        
+                    } else if (percentage >= 60) {
+                        sketch.textSize(30);
+                        sketch.fill(255, 181, 35); // 黃色
+                        sketch.text("成績良好，請再接再厲。", sketch.width / 2, sketch.height / 2 - 50);
+                        
+                    } else if (percentage > 0) {
+                        sketch.textSize(30);
+                        sketch.fill(200, 0, 0); // 紅色
+                        sketch.text("需要加強努力！", sketch.width / 2, sketch.height / 2 - 50);
+                        
+                    } else {
+                        sketch.textSize(25);
+                        sketch.fill(150);
+                        sketch.text(scoreText, sketch.width / 2, sketch.height / 2);
+                    }
+
+                    // 顯示具體分數
+                    sketch.textSize(25);
+                    sketch.fill(50);
+                    sketch.text(`得分: ${finalScore}/${maxScore}`, sketch.width / 2, sketch.height / 2 + 30);
+                    
+                    
+                    // -----------------------------------------------------------------
+                    // B. 根據分數觸發不同的幾何圖形反映 (畫面反映二) - 煙火特效
+                    // -----------------------------------------------------------------
+                    
+                    if (percentage === 100) { // <-- 滿分判斷：觸發煙火圖形
+                        sketch.noStroke();
+                        // 模擬煙火爆發效果
+                        let baseY = sketch.height / 2 + 120;
+                        sketch.fill(255, 165, 0, 200); // 橘色
+                        sketch.circle(sketch.width / 2 - 50, baseY, 50);
+                        sketch.fill(255, 255, 0, 200); // 黃色
+                        sketch.circle(sketch.width / 2 + 50, baseY, 40);
+                        sketch.fill(255, 0, 255, 200); // 紫色
+                        sketch.circle(sketch.width / 2, baseY + 40, 60);
+                        
+                    } else if (percentage >= 90) {
+                        // 原 90% 效果：大圓圈
+                        sketch.fill(0, 200, 50, 150); // 帶透明度
+                        sketch.noStroke();
+                        sketch.circle(sketch.width / 2, sketch.height / 2 + 120, 150);
+                        
+                    } else if (percentage >= 60) {
+                        // 中等效果：方形
+                        sketch.fill(255, 181, 35, 150);
+                        sketch.rectMode(sketch.CENTER);
+                        sketch.rect(sketch.width / 2, sketch.height / 2 + 120, 150, 150);
+                    }
+                };
+            }, document.getElementById('p5CanvasContainer')); // 將 p5 實例掛載到容器
         }
-    }
-}, false);
 
+        // -----------------------------------------------------------------
+        // 測試用：模擬成績數據發送
+        // -----------------------------------------------------------------
+        function simulateScore(score, max) {
+            const mockData = {
+                type: 'H5P_SCORE_RESULT',
+                score: score,
+                maxScore: max
+            };
+            // 創建一個假的事件對象來觸發監聽器
+            const mockEvent = { data: mockData };
+            window.dispatchEvent(new MessageEvent('message', { data: mockData }));
+            console.log(`--- 模擬發送分數: ${score}/${max} ---`);
+        }
 
-// =================================================================
-// 步驟二：使用 p5.js 繪製分數 (在網頁 Canvas 上顯示)
-// -----------------------------------------------------------------
-
-function setup() { 
-    // ... (其他設置)
-    createCanvas(windowWidth / 2, windowHeight / 2); 
-    background(255); 
-    noLoop(); // 如果您希望分數只有在改變時才繪製，保留此行
-} 
-
-// score_display.js 中的 draw() 函數片段
-
-function draw() { 
-    background(255); // 清除背景
-
-    // 計算百分比
-    let percentage = (finalScore / maxScore) * 100;
-
-    textSize(80); 
-    textAlign(CENTER);
-    
-    // -----------------------------------------------------------------
-    // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
-    // -----------------------------------------------------------------
-    if (percentage >= 90) {
-        // 滿分或高分：顯示鼓勵文本，使用鮮豔顏色
-        fill(0, 200, 50); // 綠色 [6]
-        text("恭喜！優異成績！", width / 2, height / 2 - 50);
-        
-    } else if (percentage >= 60) {
-        // 中等分數：顯示一般文本，使用黃色 [6]
-        fill(255, 181, 35); 
-        text("成績良好，請再接再厲。", width / 2, height / 2 - 50);
-        
-    } else if (percentage > 0) {
-        // 低分：顯示警示文本，使用紅色 [6]
-        fill(200, 0, 0); 
-        text("需要加強努力！", width / 2, height / 2 - 50);
-        
-    } else {
-        // 尚未收到分數或分數為 0
-        fill(150);
-        text(scoreText, width / 2, height / 2);
-    }
-
-    // 顯示具體分數
-    textSize(50);
-    fill(50);
-    text(`得分: ${finalScore}/${maxScore}`, width / 2, height / 2 + 50);
-    
-    
-    // -----------------------------------------------------------------
-    // B. 根據分數觸發不同的幾何圖形反映 (畫面反映二)
-    // -----------------------------------------------------------------
-    
-    if (percentage >= 90) {
-        // 畫一個大圓圈代表完美 [7]
-        fill(0, 200, 50, 150); // 帶透明度
-        noStroke();
-        circle(width / 2, height / 2 + 150, 150);
-        
-    } else if (percentage >= 60) {
-        // 畫一個方形 [4]
-        fill(255, 181, 35, 150);
-        rectMode(CENTER);
-        rect(width / 2, height / 2 + 150, 150, 150);
-    }
-    
-    // 如果您想要更複雜的視覺效果，還可以根據分數修改線條粗細 (strokeWeight) 
-    // 或使用 sin/cos 函數讓圖案的動畫效果有所不同 [8, 9]。
-}
+        // 在 p5 實例初始化後才執行 setup
+        window.onload = function() {
+            setup();
+        };
